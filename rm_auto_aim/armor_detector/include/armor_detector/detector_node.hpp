@@ -68,11 +68,13 @@ private:
   bool debug_;
   std::shared_ptr<rclcpp::ParameterEventHandler> debug_param_sub_;
   std::shared_ptr<rclcpp::ParameterCallbackHandle> debug_cb_handle_;
-  rclcpp::Publisher<auto_aim_interfaces::msg::DebugLights>::SharedPtr lights_data_pub_;
-  rclcpp::Publisher<auto_aim_interfaces::msg::DebugArmors>::SharedPtr armors_data_pub_;
-  image_transport::Publisher binary_img_pub_;
-  image_transport::Publisher number_img_pub_;
+  // rclcpp::Publisher<auto_aim_interfaces::msg::DebugLights>::SharedPtr lights_data_pub_;
+  // rclcpp::Publisher<auto_aim_interfaces::msg::DebugArmors>::SharedPtr armors_data_pub_;
+  // image_transport::Publisher binary_img_pub_;
+  // image_transport::Publisher number_img_pub_;
   image_transport::Publisher result_img_pub_;
+
+  const std::string ARMOR_TYPE_STR[3] = {"small", "large", "invalid"};
 };
 
 }  // namespace rm_auto_aim

@@ -140,7 +140,7 @@ void ArmorDetectorNode::imageCallback(const sensor_msgs::msg::Image::ConstShared
         text_marker_.id++;
         text_marker_.pose.position = armor_msg.pose.position;
         text_marker_.pose.position.y -= 0.1;
-        text_marker_.text = armor.classfication_result;
+        text_marker_.text = armor.number;
         armors_msg_.armors.emplace_back(armor_msg);
         marker_array_.markers.emplace_back(armor_marker_);
         marker_array_.markers.emplace_back(text_marker_);
@@ -157,10 +157,10 @@ void ArmorDetectorNode::imageCallback(const sensor_msgs::msg::Image::ConstShared
   }
 }
 
-std::unique_ptr<Inference> ArmorDetectorNode::initDetector(const std::string& modelpath)
-{
-  param_desc.description = "0-RED, 1-BLUE";
+std::unique_ptr<Inference> ArmorDetectorNode::initDetector()
+{ 
   rcl_interfaces::msg::ParameterDescriptor param_desc;
+  param_desc.description = "0-RED, 1-BLUE";
   auto detect_color = declare_parameter("detect_color", RED, param_desc);
 
   auto pkg_path = ament_index_cpp::get_package_share_directory("armor_detector");
@@ -201,23 +201,19 @@ std::vector<Detection> ArmorDetectorNode::detectArmors(
 
 void ArmorDetectorNode::createDebugPublishers()
 {
-  lights_data_pub_ =
-    this->create_publisher<auto_aim_interfaces::msg::DebugLights>("/detector/debug_lights", 10);
-  armors_data_pub_ =
-    this->create_publisher<auto_aim_interfaces::msg::DebugArmors>("/detector/debug_armors", 10);
+  // armors_data_pub_ =
+  //   this->create_publisher<auto_aim_interfaces::msg::DebugArmors>("/detector/debug_armors", 10);
 
-  binary_img_pub_ = image_transport::create_publisher(this, "/detector/binary_img");
-  number_img_pub_ = image_transport::create_publisher(this, "/detector/number_img");
   result_img_pub_ = image_transport::create_publisher(this, "/detector/result_img");
 }
 
 void ArmorDetectorNode::destroyDebugPublishers()
 {
-  lights_data_pub_.reset();
-  armors_data_pub_.reset();
+  // lights_data_pub_.reset();
+  // armors_data_pub_.reset();
 
-  binary_img_pub_.shutdown();
-  number_img_pub_.shutdown();
+  // binary_img_pub_.shutdown();
+  // number_img_pub_.shutdown();
   result_img_pub_.shutdown();
 }
 
