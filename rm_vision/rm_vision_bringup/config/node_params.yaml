@@ -18,10 +18,6 @@
     debug: true
 
     detect_color: 0
-    binary_thres: 80
-
-    light.min_ratio: 0.1
-    armor.min_light_ratio: 0.8
 
     classifier_threshold: 0.8
     ignore_classes: ["negative"]
