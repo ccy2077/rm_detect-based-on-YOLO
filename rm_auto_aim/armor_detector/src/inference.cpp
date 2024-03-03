@@ -1,201 +1,145 @@
+#include <fstream>
+#include <sstream>
+#include <iostream>
+
+#include <vector>
+
+#include <opencv2/dnn.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/highgui.hpp>
+
 #include "armor_detector/inference.hpp"
+
+using namespace cv;
+using namespace dnn;
+using namespace std;
+
 
 namespace rm_auto_aim
 {
-Inference::Inference(const std::string &onnxModelPath, const int &color, const cv::Size &modelInputShape)
+static inline float sigmoid_x(float x)
 {
-    modelPath = onnxModelPath;
-    modelShape = modelInputShape;
-    detect_color = color;
-    loadOnnxNetwork();
-    
-    //创建类别到数字的映射字典
-    class_to_num["0"] = "guard";
-    class_to_num["1"] = "1";
-    class_to_num["2"] = "2";
-    class_to_num["3"] = "3";
-    class_to_num["4"] = "4";
-    class_to_num["5"] = "5";
-    class_to_num["6"] = "outpost";
-    class_to_num["7"] = "base";
-    class_to_num["8"] = "1";
-    class_to_num["9"] = "guard";
-    class_to_num["10"] = "1";
-    class_to_num["11"] = "2";
-    class_to_num["12"] = "3";
-    class_to_num["13"] = "4";
-    class_to_num["14"] = "5";
-    class_to_num["15"] = "outpost";
-    class_to_num["16"] = "base";
-    class_to_num["17"] = "1";
-    class_to_num["18"] = "guard";
-    class_to_num["19"] = "1";
-    class_to_num["20"] = "2";
-    class_to_num["21"] = "3";
-    class_to_num["22"] = "4";
-    class_to_num["23"] = "5";
-    class_to_num["24"] = "outpost";
-    class_to_num["25"] = "base";
-    class_to_num["26"] = "1";
-    class_to_num["27"] = "guard";
-    class_to_num["28"] = "1";
-    class_to_num["29"] = "2";
-    class_to_num["30"] = "3";
-    class_to_num["31"] = "4";
-    class_to_num["32"] = "5";
-    class_to_num["33"] = "outpost";
-    class_to_num["34"] = "base";
-    class_to_num["35"] = "1";
+	return static_cast<float>(1.f / (1.f + exp(-x)));
+}
+
+Inference::Inference(string modelpath, int color)
+{
+	this->confThreshold = 0.5
+	this->nmsThreshold = 0.45
+	this->net = readNet(modelpath);
+	this->detect_color = color;
+	//创建类别到数字的映射字典
+    class_to_num[0] = "guard";
+    class_to_num[1] = "1";
+    class_to_num[2] = "2";
+    class_to_num[3] = "3";
+    class_to_num[4] = "4";
+    class_to_num[5] = "5";
+    class_to_num[6] = "outpost";
+    class_to_num[7] = "base";
+    class_to_num[8] = "1";
+    class_to_num[9] = "guard";
+    class_to_num[10] = "1";
+    class_to_num[11] = "2";
+    class_to_num[12] = "3";
+    class_to_num[13] = "4";
+    class_to_num[14] = "5";
+    class_to_num[15] = "outpost";
+    class_to_num[16] = "base";
+    class_to_num[17] = "1";
+    class_to_num[18] = "guard";
+    class_to_num[19] = "1";
+    class_to_num[20] = "2";
+    class_to_num[21] = "3";
+    class_to_num[22] = "4";
+    class_to_num[23] = "5";
+    class_to_num[24] = "outpost";
+    class_to_num[25] = "base";
+    class_to_num[26] = "1";
+    class_to_num[27] = "guard";
+    class_to_num[28] = "1";
+    class_to_num[29] = "2";
+    class_to_num[30] = "3";
+    class_to_num[31] = "4";
+    class_to_num[32] = "5";
+    class_to_num[33] = "outpost";
+    class_to_num[34] = "base";
+    class_to_num[35] = "1";
 
     //创建类别到颜色的映射字典
-    class_to_color["0"] = BLUE;
-    class_to_color["1"] = BLUE;
-    class_to_color["2"] = BLUE;
-    class_to_color["3"] = BLUE;
-    class_to_color["4"] = BLUE;
-    class_to_color["5"] = BLUE;
-    class_to_color["6"] = BLUE;
-    class_to_color["7"] = BLUE;
-    class_to_color["8"] = BLUE;
-    class_to_color["9"] = RED;
-    class_to_color["10"] = RED;
-    class_to_color["11"] = RED;
-    class_to_color["12"] = RED;
-    class_to_color["13"] = RED;
-    class_to_color["14"] = RED;
-    class_to_color["15"] = RED;
-    class_to_color["16"] = RED;
-    class_to_color["17"] = RED;
-    class_to_color["18"] = NONE;
-    class_to_color["19"] = NONE;
-    class_to_color["20"] = NONE;
-    class_to_color["21"] = NONE;
-    class_to_color["22"] = NONE;
-    class_to_color["23"] = NONE;
-    class_to_color["24"] = NONE;
-    class_to_color["25"] = NONE;
-    class_to_color["26"] = NONE;
-    class_to_color["27"] = NONE;
-    class_to_color["28"] = NONE;
-    class_to_color["29"] = NONE;
-    class_to_color["30"] = NONE;
-    class_to_color["31"] = NONE;
-    class_to_color["32"] = NONE;
-    class_to_color["33"] = NONE;
-    class_to_color["34"] = NONE;
-    class_to_color["35"] = NONE;
-    // loadClassesFromFile(); The classes are hard-coded for this example
+    class_to_color[0] = BLUE;
+    class_to_color[1] = BLUE;
+    class_to_color[2] = BLUE;
+    class_to_color[3] = BLUE;
+    class_to_color[4] = BLUE;
+    class_to_color[5] = BLUE;
+    class_to_color[6] = BLUE;
+    class_to_color[7] = BLUE;
+    class_to_color[8] = BLUE;
+    class_to_color[9] = RED;
+    class_to_color[10] = RED;
+    class_to_color[11] = RED;
+    class_to_color[12] = RED;
+    class_to_color[13] = RED;
+    class_to_color[14] = RED;
+    class_to_color[15] = RED;
+    class_to_color[16] = RED;
+    class_to_color[17] = RED;
+    class_to_color[18] = NONE;
+    class_to_color[19] = NONE;
+    class_to_color[20] = NONE;
+    class_to_color[21] = NONE;
+    class_to_color[22] = NONE;
+    class_to_color[23] = NONE;
+    class_to_color[24] = NONE;
+    class_to_color[25] = NONE;
+    class_to_color[26] = NONE;
+    class_to_color[27] = NONE;
+    class_to_color[28] = NONE;
+    class_to_color[29] = NONE;
+    class_to_color[30] = NONE;
+    class_to_color[31] = NONE;
+    class_to_color[32] = NONE;
+    class_to_color[33] = NONE;
+    class_to_color[34] = NONE;
+    class_to_color[35] = NONE;
 }
 
-std::vector<Detection> Inference::runInference(const cv::Mat &input)
+Mat  Inference::resize_image(Mat srcimg, int *newh, int *neww, int *padh, int *padw)
 {
-    cv::Mat modelInput = input;
-    if (letterBoxForSquare && modelShape.width == modelShape.height)
-        modelInput = formatToSquare(modelInput);
-
-    cv::Mat blob;
-    cv::dnn::blobFromImage(modelInput, blob, 1.0/255.0, modelShape, cv::Scalar(), true, false);
-    net.setInput(blob);
-
-    std::vector<cv::Mat> outputs;
-    net.forward(outputs, net.getUnconnectedOutLayersNames());
-
-    int rows = outputs[0].size[1];
-    int dimensions = outputs[0].size[2];
-
-    // yolov5 has an output of shape (batchSize, 25200, 85) (Num classes + box[x,y,w,h] + confidence[c])
-    // yolov8 has an output of shape (batchSize, 84,  8400) (Num classes + box[x,y,w,h])
-
-    rows = outputs[0].size[2];
-    dimensions = outputs[0].size[1];
-
-    outputs[0] = outputs[0].reshape(1, dimensions);
-    cv::transpose(outputs[0], outputs[0]);
-
-    float *data = (float *)outputs[0].data;
-
-    float x_factor = modelInput.cols / modelShape.width;
-    float y_factor = modelInput.rows / modelShape.height;
-
-    std::vector<int> class_ids;
-    std::vector<float> confidences;
-    std::vector<cv::Rect> boxes;
-
-    for (int i = 0; i < rows; ++i)
-    {
-       
-        float *classes_scores = data+4;
-
-        cv::Mat scores(1, classes.size(), CV_32FC1, classes_scores);
-        cv::Point class_id;
-        double maxClassScore;
-
-        minMaxLoc(scores, 0, &maxClassScore, 0, &class_id);
-
-        if (maxClassScore > modelScoreThreshold)
-        {
-            confidences.push_back(maxClassScore);
-            class_ids.push_back(class_id.x);
-
-            float x = data[0];
-            float y = data[1];
-            float w = data[2];
-            float h = data[3];
-
-            int left = int((x - 0.5 * w) * x_factor);
-            int top = int((y - 0.5 * h) * y_factor);
-
-            int width = int(w * x_factor);
-            int height = int(h * y_factor);
-
-            boxes.push_back(cv::Rect(left, top, width, height));
-        }
-        
-        data += dimensions;
-    }
-
-    std::vector<int> nms_result;
-    cv::dnn::NMSBoxes(boxes, confidences, modelScoreThreshold, modelNMSThreshold, nms_result);
-
-    for (unsigned long i = 0; i < nms_result.size(); ++i)
-    {
-        int idx = nms_result[i];
-
-        Detection result;
-        result.class_id = class_ids[idx];
-        result.confidence = confidences[idx];
-
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::uniform_int_distribution<int> dis(100, 255);
-
-        result.color = class_to_color[classes[result.class_id]];
-        if (result.color != detect_color) {continue;}
-
-        result.number = class_to_num[classes[result.class_id]];
-
-        //获取两个灯条的顶点和底部坐标，获取装甲板中心坐标
-        result.left_light.top = (cv::Point2f)boxes[idx].tl();
-        result.left_light.bottom = (cv::Point2f)boxes[idx].tl() + cv::Point2f(0,boxes[idx].height);
-        result.right_light.bottom = (cv::Point2f)boxes[idx].br();
-        result.right_light.top = (cv::Point2f)boxes[idx].br() - cv::Point2f(0,boxes[idx].height);
-        result.center = cv::Point2f(boxes[idx].x+(boxes[idx].width/2),boxes[idx].y+(boxes[idx].height/2));
-
-        //判断装甲板大小
-        float center_distance = cv::norm(((result.left_light.top+result.left_light.bottom)/2) - ((result.right_light.top+result.right_light.bottom)/2)) / boxes[idx].height;
-        result.type = center_distance > 3.2 ? ArmorType::LARGE : ArmorType::SMALL;
-
-        armors.push_back(result);
-    }
-
-    return armors;
+	int srch = srcimg.rows, srcw = srcimg.cols;
+	*newh = this->inpHeight;
+	*neww = this->inpWidth;
+	Mat dstimg;
+	if (this->keep_ratio && srch != srcw) {
+		float hw_scale = (float)srch / srcw;
+		if (hw_scale > 1) {
+			*newh = this->inpHeight;
+			*neww = int(this->inpWidth / hw_scale);
+			resize(srcimg, dstimg, Size(*neww, *newh), INTER_AREA);
+			*padw = int((this->inpWidth - *neww) * 0.5);
+			copyMakeBorder(dstimg, dstimg, 0, 0, *padw, this->inpWidth - *neww - *padw, BORDER_CONSTANT, 0);
+		}
+		else {
+			*newh = (int)this->inpHeight * hw_scale;
+			*neww = this->inpWidth;
+			resize(srcimg, dstimg, Size(*neww, *newh), INTER_AREA);
+			*padh = (int)(this->inpHeight - *newh) * 0.5;
+			copyMakeBorder(dstimg, dstimg, *padh, this->inpHeight - *newh - *padh, 0, 0, BORDER_CONSTANT, 0);
+		}
+	}
+	else {
+		resize(srcimg, dstimg, Size(*neww, *newh), INTER_AREA);
+	}
+	cout<<"resize done"<<endl;
+	return dstimg;
 }
 
-void Inference::drawArmor(cv::Mat & img)
+void  Inference::drawArmor(Mat& img)   // Draw the predicted bounding box
 {
-    for (const auto & armor : armors)
-    {
-        //画出装甲板
+	for (auto Armor : Armors)
+	{
+		//画出装甲板
         cv::line(img, armor.left_light.top, armor.right_light.bottom, cv::Scalar(0, 255, 0), 2);
         cv::line(img, armor.left_light.bottom, armor.right_light.top, cv::Scalar(0, 255, 0), 2);
         cv::line(img, armor.left_light.top, armor.left_light.bottom, cv::Scalar(0, 255, 0), 2);
@@ -208,26 +152,154 @@ void Inference::drawArmor(cv::Mat & img)
         //标出置信度和类别
         cv::putText(img, std::to_string(armor.confidence), armor.left_light.top, cv::FONT_HERSHEY_SIMPLEX, 0.8,cv::Scalar(0, 255, 255), 2);
         cv::putText(img, armor.number, armor.left_light.top, cv::FONT_HERSHEY_SIMPLEX, 0.8,cv::Scalar(0, 255, 255), 2);
-    }
+	}
 }
 
-void Inference::loadOnnxNetwork()
+void  Inference::softmax_(const float* x, float* y, int length)
 {
-    net = cv::dnn::readNetFromONNX(modelPath);
-
-    std::cout << "\nRunning on CPU" << std::endl;
-    net.setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
-    net.setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
-
+	float sum = 0;
+	int i = 0;
+	for (i = 0; i < length; i++)
+	{
+		y[i] = exp(x[i]);
+		sum += y[i];
+	}
+	for (i = 0; i < length; i++)
+	{
+		y[i] /= sum;
+	}
 }
 
-cv::Mat Inference::formatToSquare(const cv::Mat &source)
+void Inference::generate_proposal(Mat out, vector<int>& cls_ids, vector<Rect>& boxes, vector<float>& confidences, vector< vector<Point>>& landmarks, int imgh,int imgw, float ratioh, float ratiow, int padh, int padw)
+{	
+	//输出层结构bchw
+	const int feat_h = out.size[2];
+	const int feat_w = out.size[3];
+	cout << out.size[0]<<", "<<out.size[1] << "," << out.size[2] << "," << out.size[3]<<endl;
+	const int stride = (int)ceil((float)inpHeight / feat_h);
+	const int area = feat_h * feat_w;
+	float* ptr = (float*)out.data;
+	float* ptr_cls = ptr + area * reg_max * 4;
+	float* ptr_kp = ptr + area * (reg_max * 4 + num_class);
+	int cls_id;
+	
+	for (int i = 0; i < feat_h; i++)
+	{
+		for (int j = 0; j < feat_w; j++)
+		{
+			const int index = i * feat_w + j;
+			cls_id = -1;
+			float max_conf = -10000;
+			for (int k = 0; k < num_class; k++)
+			{
+				float conf = ptr_cls[k*area + index];
+				if (conf > max_conf)
+				{
+					max_conf = conf;
+					cls_id = k;
+				}
+			}
+			
+			float box_prob = sigmoid_x(max_conf);
+			if (box_prob > this->confThreshold)
+			{
+				float pred_ltrb[4];
+				float* dfl_value = new float[reg_max];
+				float* dfl_softmax = new float[reg_max];
+				for (int k = 0; k < 4; k++)
+				{
+					for (int n = 0; n < reg_max; n++)
+					{
+						dfl_value[n] = ptr[(k*reg_max + n)*area + index];
+					}
+					softmax_(dfl_value, dfl_softmax, reg_max);
+
+					float dis = 0.f;
+					for (int n = 0; n < reg_max; n++)
+					{
+						dis += n * dfl_softmax[n];
+					}
+
+					pred_ltrb[k] = dis * stride;
+				}
+				float cx = (j + 0.5f)*stride;
+				float cy = (i + 0.5f)*stride;
+				float xmin = max((cx - pred_ltrb[0] - padw)*ratiow, 0.f);  ///还原回到原图
+				float ymin = max((cy - pred_ltrb[1] - padh)*ratioh, 0.f);
+				float xmax = min((cx + pred_ltrb[2] - padw)*ratiow, float(imgw - 1));
+				float ymax = min((cy + pred_ltrb[3] - padh)*ratioh, float(imgh - 1));
+
+				Rect box = Rect(int(xmin), int(ymin), int(xmax - xmin), int(ymax - ymin));
+				boxes.push_back(box);
+				confidences.push_back(box_prob);
+				cls_ids.push_back(cls_id);
+
+				vector<Point> kpts(5);
+				for (int k = 0; k < 5; k++)
+				{
+					float x = ((ptr_kp[(k * 2)*area + index] * 2 + j)*stride - padw)*ratiow;  ///还原回到原图
+					float y = ((ptr_kp[(k * 2 + 1)*area + index] * 2 + i)*stride - padh)*ratioh;
+					kpts[k] = Point(int(x), int(y));
+				}
+				landmarks.push_back(kpts);
+			}
+		}
+	}
+}
+
+
+vector<Detection>  Inference::detect(Mat& srcimg)
 {
-    int col = source.cols;
-    int row = source.rows;
-    int _max = MAX(col, row);
-    cv::Mat result = cv::Mat::zeros(_max, _max, CV_8UC3);
-    source.copyTo(result(cv::Rect(0, 0, col, row)));
-    return result;
+	int newh = 0, neww = 0, padh = 0, padw = 0;
+	Mat dst = this->resize_image(srcimg, &newh, &neww, &padh, &padw);
+	Mat blob;
+	blobFromImage(dst, blob, 1 / 255.0, Size(this->inpWidth, this->inpHeight), Scalar(0, 0, 0), true, false);
+	this->net.setInput(blob);
+	vector<Mat> outs;
+	net.enableWinograd(false);
+	this->net.forward(outs, this->net.getUnconnectedOutLayersNames());
+
+	vector<Rect> boxes;
+	vector<float> confidences;
+	vector< vector<Point>> landmarks;
+	vector<int> cls_ids;
+
+	float ratioh = (float)srcimg.rows / newh, ratiow = (float)srcimg.cols / neww;
+
+	generate_proposal(outs[0], cls_ids, boxes, confidences, landmarks, srcimg.rows, srcimg.cols, ratioh, ratiow, padh, padw);
+	generate_proposal(outs[1], cls_ids, boxes, confidences, landmarks, srcimg.rows, srcimg.cols, ratioh, ratiow, padh, padw);
+	generate_proposal(outs[2], cls_ids, boxes, confidences, landmarks, srcimg.rows, srcimg.cols, ratioh, ratiow, padh, padw);
+
+	vector<int> indices;
+	NMSBoxes(boxes, confidences, this->confThreshold, this->nmsThreshold, indices);
+	Armors.clear()
+	for (size_t i = 0; i < indices.size(); ++i)
+	{
+		int idx = indices[i];
+		Rect box = boxes[idx];
+		Detection Armor;
+		Armor.color = class_to_color[cls_ids[idx]];
+        if (Armor.color != detect_color) {continue;}
+
+        Armor.number = class_to_num[cls_ids[idx]];
+
+		Armor.class_id = cls_ids[idx];
+		Armor.confidence = confidences[idx];
+		Armor.left_light.top = (cv::Point2f)box.tl();
+        Armor.left_light.bottom = (cv::Point2f)box.tl() + cv::Point2f(0,box.height);
+        Armor.right_light.bottom = (cv::Point2f)box.br();
+        Armor.right_light.top = (cv::Point2f)box.br() - cv::Point2f(0,box.height);
+        Armor.center = cv::Point2f(box.x+(box.width/2),box.y+(box.height/2));
+
+		float center_distance = cv::norm(((Armor.left_light.top+Armor.left_light.bottom)/2) - ((Armor.right_light.top+Armor.right_light.bottom)/2)) / boxes[idx].height;
+        Armor.type = center_distance > 3.2 ? ArmorType::LARGE : ArmorType::SMALL;
+
+		Armors.push_back(Armor);
+		// cout<<"class: "<<cls_ids[idx]<<endl;
+		// this->drawPred(, box.x, box.y,
+		// 	box.x + box.width, box.y + box.height, srcimg, landmarks[idx]);
+	}
+
+	return Armors;
 }
 }
