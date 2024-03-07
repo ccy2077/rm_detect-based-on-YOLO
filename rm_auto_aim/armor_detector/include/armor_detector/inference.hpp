@@ -48,7 +48,8 @@ public:
 	Inference(string modelpath, int color);
 	vector<Detection> runInference(Mat& frame);
     vector<Detection> Armors;
-    
+    int detect_color;
+    void drawArmor(Mat& img);
 private:
 	cv::Mat resize_image(Mat srcimg, int *newh, int *neww, int *padh, int *padw);
 	const bool keep_ratio = true;
@@ -58,7 +59,7 @@ private:
 	float nmsThreshold;
 	const int num_class = 36;  //总共36个类别
 	const int reg_max = 16;
-    int detect_color;
+    
    
      //创建类别到数字的映射字典
     std::map<int,string> class_to_num;
@@ -69,7 +70,7 @@ private:
 
 	void softmax_(const float* x, float* y, int length);
 	void generate_proposal(Mat out, vector<int>& cls_ids, vector<Rect>& boxes, vector<float>& confidences, vector< vector<Point>>& landmarks, int imgh, int imgw, float ratioh, float ratiow, int padh, int padw);
-	void drawArmor(Mat& img);
+	
 };
 }
 #endif

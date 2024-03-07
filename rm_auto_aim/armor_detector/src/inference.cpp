@@ -24,8 +24,8 @@ static inline float sigmoid_x(float x)
 
 Inference::Inference(string modelpath, int color)
 {
-	this->confThreshold = 0.5
-	this->nmsThreshold = 0.45
+	this->confThreshold = 0.5;
+	this->nmsThreshold = 0.45;
 	this->net = readNet(modelpath);
 	this->detect_color = color;
 	//创建类别到数字的映射字典
@@ -137,7 +137,7 @@ Mat  Inference::resize_image(Mat srcimg, int *newh, int *neww, int *padh, int *p
 
 void  Inference::drawArmor(Mat& img)   // Draw the predicted bounding box
 {
-	for (auto Armor : Armors)
+	for (auto armor : Armors)
 	{
 		//画出装甲板
         cv::line(img, armor.left_light.top, armor.right_light.bottom, cv::Scalar(0, 255, 0), 2);
@@ -248,7 +248,7 @@ void Inference::generate_proposal(Mat out, vector<int>& cls_ids, vector<Rect>& b
 }
 
 
-vector<Detection>  Inference::detect(Mat& srcimg)
+vector<Detection>  Inference::runInference(Mat& srcimg)
 {
 	int newh = 0, neww = 0, padh = 0, padw = 0;
 	Mat dst = this->resize_image(srcimg, &newh, &neww, &padh, &padw);
@@ -272,7 +272,7 @@ vector<Detection>  Inference::detect(Mat& srcimg)
 
 	vector<int> indices;
 	NMSBoxes(boxes, confidences, this->confThreshold, this->nmsThreshold, indices);
-	Armors.clear()
+	Armors.clear();
 	for (size_t i = 0; i < indices.size(); ++i)
 	{
 		int idx = indices[i];
